@@ -100,13 +100,16 @@ class PFLDInference(nn.Module):
         self.fc = nn.Linear(176, 196)
 
     def forward(self, x):  # x: 3, 112, 112
+        # print(f'PFLDInference_input : {x.shape}')
         x = self.relu(self.bn1(self.conv1(x)))  # [64, 56, 56]
         x = self.relu(self.bn2(self.conv2(x)))  # [64, 56, 56]
         x = self.conv3_1(x)
         x = self.block3_2(x)
         x = self.block3_3(x)
         x = self.block3_4(x)
+        # print (f'PFLDInference_block3_4 : {x.shape}') #torch.Size([32, 64, 28, 28])
         out1 = self.block3_5(x)
+        # print(f'PFLDInference_out1 : {out1.shape}') #torch.Size([32, 64, 28, 28])
 
         x = self.conv4_1(out1)
         x = self.conv5_1(x)
@@ -116,18 +119,24 @@ class PFLDInference(nn.Module):
         x = self.block5_5(x)
         x = self.block5_6(x)
         x = self.conv6_1(x)
+        # print(f'PFLDInference_conv6_1 : {x.shape}') #torch.Size([32, 16, 14, 14])
         x1 = self.avg_pool1(x)
+        # print(f'PFLDInference_avg_pool1 : {x1.shape}') #torch.Size([32, 16, 1, 1])
         x1 = x1.view(x1.size(0), -1)
 
         x = self.conv7(x)
+        # print(f'PFLDInference_conv7 : {x.shape}') #torch.Size([32, 32, 7, 7])
         x2 = self.avg_pool2(x)
+        # print(f'PFLDInference_avg_pool2 : {x2.shape}') #torch.Size([32, 32, 1, 1])
         x2 = x2.view(x2.size(0), -1)
 
         x3 = self.relu(self.conv8(x))
+        # print(f'PFLDInference_conv8 : {x3.shape}') #torch.Size([32, 128, 1, 1])，卷积核7
         x3 = x3.view(x3.size(0), -1)
 
         multi_scale = torch.cat([x1, x2, x3], 1)
-        landmarks = self.fc(multi_scale)
+        # print(f'PFLDInference_multi_scale : {multi_scale.shape}') #torch.Size([32, 176]) 128+32+16=176
+        landmarks = self.fc(multi_scale) #176-196
 
         return out1, landmarks
 
@@ -144,11 +153,14 @@ class AuxiliaryNet(nn.Module):
         self.fc2 = nn.Linear(32, 3)
 
     def forward(self, x):
+        # print(f'AuxiliaryNet_input : {x.shape}') #torch.Size([32, 64, 28, 28])
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
+        # print(f'AuxiliaryNet_conv4 : {x.shape}') #torch.Size([32, 128, 3, 3])
         x = self.max_pool1(x)
+        # print(f'AuxiliaryNet_max_pool1 : {x.shape}') #torch.Size([32, 128, 1, 1])
         x = x.view(x.size(0), -1)
         x = self.fc1(x)
         x = self.fc2(x)
@@ -163,5 +175,22 @@ class AuxiliaryNet(nn.Module):
 #     features, landmarks = pfld_backbone(input)
 #     angle = auxiliarynet(features)
 
-#     print("angle.shape:{0:}, landmarks.shape: {1:}".format(
+#     # print("angle.shape:{0:}, landmarks.shape: {1:}".format(
 #         angle.shape, landmarks.shape))
+
+'''
+PFLDInference_input : torch.Size([32, 3, 112, 112])
+PFLDInference_block3_4 : torch.Size([32, 64, 28, 28])
+PFLDInference_out1 : torch.Size([32, 64, 28, 28])
+PFLDInference_conv6_1 : torch.Size([32, 16, 14, 14])
+PFLDInference_avg_pool1 : torch.Size([32, 16, 1, 1])
+PFLDInference_conv7 : torch.Size([32, 32, 7, 7])
+PFLDInference_avg_pool2 : torch.Size([32, 32, 1, 1])
+PFLDInference_conv8 : torch.Size([32, 128, 1, 1])
+PFLDInference_multi_scale : torch.Size([32, 176])
+AuxiliaryNet_input : torch.Size([32, 64, 28, 28])
+AuxiliaryNet_conv4 : torch.Size([32, 128, 3, 3])
+AuxiliaryNet_max_pool1 : torch.Size([32, 128, 1, 1])
+
+
+'''
